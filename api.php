@@ -1,7 +1,7 @@
 <?php
 /**
- * CalcuNota CRUD API
- * Handles GET, POST, and DELETE requests for subjects.
+ * Billetera Digital CRUD API
+ * Handles GET and POST requests for expenses and budget.
  */
 header('Content-Type: application/json');
 require_once __DIR__ . '/db/db.php';
@@ -14,23 +14,48 @@ try {
 
     // 1. GET Requests: Read
     if ($method === 'GET') {
+        if ($action === 'get_income') {
+            $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'monthly_income'");
+            $stmt->execute();
+            $income = $stmt->fetchColumn();
+            echo json_encode(['success' => true, 'income' => floatval($income)]);
+            exit;
+        }
+
         if (isset($_GET['id'])) {
-            // Read single subject
-            $stmt = $db->prepare("SELECT * FROM subjects WHERE id = :id");
+            // Read single expense
+            $stmt = $db->prepare("SELECT * FROM expenses WHERE id = :id");
             $stmt->execute([':id' => intval($_GET['id'])]);
-            $subject = $stmt->fetch();
+            $expense = $stmt->fetch();
             
-            if ($subject) {
-                echo json_encode(['success' => true, 'data' => $subject]);
+            if ($expense) {
+                echo json_encode(['success' => true, 'data' => $expense]);
             } else {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'error' => 'Asignatura no encontrada.']);
+                echo json_encode(['success' => false, 'error' => 'Gasto no encontrado.']);
             }
         } else {
-            // Read all subjects (ordered by last updated)
-            $stmt = $db->query("SELECT id, name, scale, updated_at FROM subjects ORDER BY updated_at DESC");
-            $subjects = $stmt->fetchAll();
-            echo json_encode(['success' => true, 'data' => $subjects]);
+            // Read all expenses and budget
+            // Read income
+            $stmtIncome = $db->prepare("SELECT value FROM settings WHERE key = 'monthly_income'");
+            $stmtIncome->execute();
+            $income = floatval($stmtIncome->fetchColumn() ?: 1000000);
+
+            // Read savings goal
+            $stmtSavings = $db->prepare("SELECT value FROM settings WHERE key = 'savings_goal'");
+            $stmtSavings->execute();
+            $savings_goal = floatval($stmtSavings->fetchColumn() ?: 200000);
+
+            // Read expenses (ordered by date desc, then id desc)
+            $stmtExpenses = $db->query("SELECT * FROM expenses ORDER BY date DESC, id DESC");
+            $expenses = $stmtExpenses->fetchAll();
+
+            echo json_encode([
+                'success' => true,
+                'income' => $income,
+                'savings_goal' => $savings_goal,
+                'expenses' => $expenses
+            ]);
         }
         exit;
     }
@@ -42,101 +67,139 @@ try {
         $input = json_decode($input_raw, true);
         
         if (!$input) {
-            // Fallback to post form fields if JSON decode fails
             $input = $_POST;
         }
 
-        // Action: Save (Create or Update)
-        if ($action === 'save') {
-            $name = isset($input['name']) ? trim($input['name']) : '';
-            if (empty($name)) {
+        // Action: Save Expense (Create or Update)
+        if ($action === 'save_expense') {
+            $description = isset($input['description']) ? trim($input['description']) : '';
+            $amount = isset($input['amount']) ? floatval($input['amount']) : 0.0;
+            $category = isset($input['category']) ? trim($input['category']) : '';
+            $date = isset($input['date']) ? trim($input['date']) : '';
+            $payment_method = isset($input['payment_method']) ? trim($input['payment_method']) : '';
+
+            if (empty($description)) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'El nombre de la asignatura es requerido.']);
+                echo json_encode(['success' => false, 'error' => 'La descripción es requerida.']);
                 exit;
             }
-
-            $scale = isset($input['scale']) ? $input['scale'] : 'chile';
-            $passing_grade = isset($input['passing_grade']) ? floatval($input['passing_grade']) : 4.0;
-            $exam_enabled = !empty($input['exam_enabled']) ? 1 : 0;
-            $exam_weight = isset($input['exam_weight']) ? floatval($input['exam_weight']) : 30.0;
-            $equal_weights = !empty($input['equal_weights']) ? 1 : 0;
-            $grades_json = isset($input['grades_json']) ? $input['grades_json'] : '[]';
-
-            // Validate JSON format
-            if (!is_array(json_decode($grades_json, true))) {
-                $grades_json = '[]';
+            if ($amount <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'El monto debe ser mayor a 0.']);
+                exit;
+            }
+            if (empty($category)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'La categoría es requerida.']);
+                exit;
+            }
+            if (empty($date)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'La fecha es requerida.']);
+                exit;
+            }
+            if (empty($payment_method)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'El método de pago es requerido.']);
+                exit;
             }
 
             $id = isset($input['id']) ? intval($input['id']) : 0;
 
             if ($id > 0) {
                 // UPDATE
-                $stmt = $db->prepare("UPDATE subjects SET 
-                    name = :name,
-                    scale = :scale,
-                    passing_grade = :passing_grade,
-                    exam_enabled = :exam_enabled,
-                    exam_weight = :exam_weight,
-                    equal_weights = :equal_weights,
-                    grades_json = :grades_json,
+                $stmt = $db->prepare("UPDATE expenses SET 
+                    description = :description,
+                    amount = :amount,
+                    category = :category,
+                    date = :date,
+                    payment_method = :payment_method,
                     updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id");
                 
                 $stmt->execute([
-                    ':name' => $name,
-                    ':scale' => $scale,
-                    ':passing_grade' => $passing_grade,
-                    ':exam_enabled' => $exam_enabled,
-                    ':exam_weight' => $exam_weight,
-                    ':equal_weights' => $equal_weights,
-                    ':grades_json' => $grades_json,
+                    ':description' => $description,
+                    ':amount' => $amount,
+                    ':category' => $category,
+                    ':date' => $date,
+                    ':payment_method' => $payment_method,
                     ':id' => $id
                 ]);
                 
-                echo json_encode(['success' => true, 'message' => 'Asignatura actualizada.', 'id' => $id]);
+                echo json_encode(['success' => true, 'message' => 'Gasto actualizado exitosamente.', 'id' => $id]);
             } else {
                 // CREATE
-                $stmt = $db->prepare("INSERT INTO subjects 
-                    (name, scale, passing_grade, exam_enabled, exam_weight, equal_weights, grades_json) 
+                $stmt = $db->prepare("INSERT INTO expenses 
+                    (description, amount, category, date, payment_method) 
                     VALUES 
-                    (:name, :scale, :passing_grade, :exam_enabled, :exam_weight, :equal_weights, :grades_json)");
+                    (:description, :amount, :category, :date, :payment_method)");
                 
                 $stmt->execute([
-                    ':name' => $name,
-                    ':scale' => $scale,
-                    ':passing_grade' => $passing_grade,
-                    ':exam_enabled' => $exam_enabled,
-                    ':exam_weight' => $exam_weight,
-                    ':equal_weights' => $equal_weights,
-                    ':grades_json' => $grades_json
+                    ':description' => $description,
+                    ':amount' => $amount,
+                    ':category' => $category,
+                    ':date' => $date,
+                    ':payment_method' => $payment_method
                 ]);
                 
                 $new_id = $db->lastInsertId();
-                echo json_encode(['success' => true, 'message' => 'Asignatura guardada.', 'id' => $new_id]);
+                echo json_encode(['success' => true, 'message' => 'Gasto registrado exitosamente.', 'id' => $new_id]);
             }
             exit;
         }
 
-        // Action: Delete
-        if ($action === 'delete') {
-            $id = isset($input['id']) ? intval($input['id']) : 0;
-            if ($id <= 0) {
+        // Action: Save Income / Budget
+        if ($action === 'save_income') {
+            $income = isset($input['income']) ? floatval($input['income']) : 0.0;
+            if ($income < 0) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'ID de asignatura inválido.']);
+                echo json_encode(['success' => false, 'error' => 'El ingreso mensual no puede ser negativo.']);
                 exit;
             }
 
-            $stmt = $db->prepare("DELETE FROM subjects WHERE id = :id");
+            $stmt = $db->prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('monthly_income', :income)");
+            $stmt->execute([':income' => strval($income)]);
+
+            echo json_encode(['success' => true, 'message' => 'Ingreso mensual actualizado.', 'income' => $income]);
+            exit;
+        }
+
+        // Action: Save Savings Goal
+        if ($action === 'save_savings_goal') {
+            $savings_goal = isset($input['savings_goal']) ? floatval($input['savings_goal']) : 0.0;
+            if ($savings_goal < 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'La meta de ahorro no puede ser negativa.']);
+                exit;
+            }
+
+            $stmt = $db->prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('savings_goal', :savings_goal)");
+            $stmt->execute([':savings_goal' => strval($savings_goal)]);
+
+            echo json_encode(['success' => true, 'message' => 'Meta de ahorro actualizada.', 'savings_goal' => $savings_goal]);
+            exit;
+        }
+
+        // Action: Delete Expense
+        if ($action === 'delete_expense') {
+            $id = isset($input['id']) ? intval($input['id']) : 0;
+            if ($id <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'ID de gasto inválido.']);
+                exit;
+            }
+
+            $stmt = $db->prepare("DELETE FROM expenses WHERE id = :id");
             $stmt->execute([':id' => $id]);
 
-            echo json_encode(['success' => true, 'message' => 'Asignatura eliminada exitosamente.']);
+            echo json_encode(['success' => true, 'message' => 'Gasto eliminado exitosamente.']);
             exit;
         }
     }
 
     // Default response for unhandled endpoints
     http_response_code(405);
-    echo json_encode(['success' => false, 'error' => 'Método no permitido.']);
+    echo json_encode(['success' => false, 'error' => 'Método o acción no permitida.']);
 
 } catch (Exception $e) {
     http_response_code(500);

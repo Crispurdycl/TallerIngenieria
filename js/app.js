@@ -1,56 +1,61 @@
-// Preset configurations for scales
-const SCALES = {
-    chile: { min: 1.0, max: 7.0, pass: 4.0, step: 0.1, placeholder: "Ej: 4.0" },
-    spain: { min: 0.0, max: 10.0, pass: 5.0, step: 0.1, placeholder: "Ej: 5.0" },
-    colombia: { min: 0.0, max: 5.0, pass: 3.0, step: 0.1, placeholder: "Ej: 3.0" },
-    usa: { min: 0, max: 100, pass: 60, step: 1, placeholder: "Ej: 60" }
+    // FinanzApp - JavaScript Frontend Logic
+
+// State variables
+let state = {
+    income: 1000000,
+    savingsGoal: 200000,
+    expenses: [],
+    currentFilter: 'all',
+    searchQuery: ''
 };
 
-let currentScaleKey = "chile";
-let currentScale = SCALES[currentScaleKey];
-let currentSubjectId = null; // Track loaded database subject
+// DOM Elements cache
+const body = document.body;
+const themeToggle = document.getElementById("themeToggle");
 
-// DOM Elements
-const scaleSelect = document.getElementById("scaleSelect");
-const passingGradeInput = document.getElementById("passingGrade");
-const gradesContainer = document.getElementById("gradesContainer");
-const btnAddGrade = document.getElementById("btnAddGrade");
-const equalWeightsCheckbox = document.getElementById("equalWeights");
-const examSwitch = document.getElementById("examSwitch");
-const examInputsWrapper = document.getElementById("examInputsWrapper");
-const examWeightInput = document.getElementById("examWeight");
+const monthlyIncomeInput = document.getElementById("monthlyIncomeInput");
+const btnSaveIncome = document.getElementById("btnSaveIncome");
 
-const averageText = document.getElementById("averageText");
-const statusBadge = document.getElementById("statusBadge");
-const statusLabel = document.getElementById("statusLabel");
-const examTargetCard = document.getElementById("examTargetCard");
-const examTargetValue = document.getElementById("examTargetValue");
-const examTargetDetail = document.getElementById("examTargetDetail");
-const weightSumText = document.getElementById("weightSumText");
-const weightProgressBar = document.getElementById("weightProgressBar");
-const weightWarning = document.getElementById("weightWarning");
+const savingsGoalInput = document.getElementById("savingsGoalInput");
+const btnSaveSavingsGoal = document.getElementById("btnSaveSavingsGoal");
+
+const displayIncome = document.getElementById("displayIncome");
+const displayExpenses = document.getElementById("displayExpenses");
+const displayBalance = document.getElementById("displayBalance");
+const displaySavingsGoal = document.getElementById("displaySavingsGoal");
+
 const circleBar = document.getElementById("circleBar");
+const percentageText = document.getElementById("percentageText");
+const budgetWarning = document.getElementById("budgetWarning");
 
-const btnClear = document.getElementById("btnClear");
-const btnShare = document.getElementById("btnShare");
+const savingsPercentageText = document.getElementById("savingsPercentageText");
+const savingsBar = document.getElementById("savingsBar");
+const savingsStatusText = document.getElementById("savingsStatusText");
+
+const searchInput = document.getElementById("searchInput");
+const categoryFilters = document.getElementById("categoryFilters");
+const expensesList = document.getElementById("expensesList");
+const btnOpenAddModal = document.getElementById("btnOpenAddModal");
+
+const expenseModal = document.getElementById("expenseModal");
+const modalTitle = document.getElementById("modalTitle");
+const expenseId = document.getElementById("expenseId");
+const expenseDescription = document.getElementById("expenseDescription");
+const expenseAmount = document.getElementById("expenseAmount");
+const expenseCategory = document.getElementById("expenseCategory");
+const expenseDate = document.getElementById("expenseDate");
+const expensePaymentMethod = document.getElementById("expensePaymentMethod");
+const btnCancelExpense = document.getElementById("btnCancelExpense");
+const btnSaveExpense = document.getElementById("btnSaveExpense");
+
+const categoryDistribution = document.getElementById("categoryDistribution");
 const toast = document.getElementById("toast");
-
-// CRUD DOM Elements
-const subjectsList = document.getElementById("subjectsList");
-const subjectsCount = document.getElementById("subjectsCount");
-const btnSaveSubject = document.getElementById("btnSaveSubject");
-const btnSaveSubjectAs = document.getElementById("btnSaveSubjectAs");
-const saveModal = document.getElementById("saveModal");
-const btnModalCancel = document.getElementById("btnModalCancel");
-const btnModalSave = document.getElementById("btnModalSave");
-const modalSubjectName = document.getElementById("modalSubjectName");
+const toastText = document.getElementById("toastText");
 
 // ----------------------------------------------------
 // Theme Management
 // ----------------------------------------------------
-const body = document.body;
-const themeToggle = document.getElementById("themeToggle");
-const savedTheme = localStorage.getItem("theme") || "theme-light";
+const savedTheme = localStorage.getItem("theme") || "theme-dark";
 body.className = savedTheme;
 
 themeToggle.addEventListener("click", () => {
@@ -63,660 +68,417 @@ themeToggle.addEventListener("click", () => {
     }
 });
 
-// Initialize passing grade placeholder/value
-if (passingGradeInput && !passingGradeInput.value) {
-    passingGradeInput.value = currentScale.pass;
-}
+
 
 // ----------------------------------------------------
-// Grade Calculator Logic
+// Toast Notification Helper
 // ----------------------------------------------------
-
-// Scale Select changes
-scaleSelect.addEventListener("change", (e) => {
-    const oldScale = currentScale;
-    currentScaleKey = e.target.value;
-    currentScale = SCALES[currentScaleKey];
-    
-    // Adjust passing grade based on scale
-    passingGradeInput.placeholder = currentScale.placeholder;
-    
-    // Map the previous passing grade proportionally or just assign default
-    if (parseFloat(passingGradeInput.value) === oldScale.pass || !passingGradeInput.value) {
-        passingGradeInput.value = currentScale.pass;
-    } else {
-        // If customized, cap it within the range
-        let val = parseFloat(passingGradeInput.value);
-        if (val < currentScale.min) val = currentScale.min;
-        if (val > currentScale.max) val = currentScale.max;
-        passingGradeInput.value = val;
-    }
-
-    // Adjust min/max/step on all grade inputs
-    document.querySelectorAll(".grade-input").forEach(input => {
-        input.min = currentScale.min;
-        input.max = currentScale.max;
-        input.step = currentScale.step;
-        
-        let val = parseFloat(input.value);
-        if (!isNaN(val)) {
-            if (val < currentScale.min) input.value = currentScale.min;
-            if (val > currentScale.max) input.value = currentScale.max;
-        }
-    });
-
-    calculate();
-});
-
-// Event listener for inputs change (event delegation)
-document.addEventListener("input", (e) => {
-    if (e.target.classList.contains("grade-input") || 
-        e.target.classList.contains("weight-input") || 
-        e.target === passingGradeInput || 
-        e.target === examWeightInput) {
-        calculate();
-    }
-});
-
-// Add Grade button clicked
-btnAddGrade.addEventListener("click", () => {
-    addGradeRow();
-});
-
-// Equal Weights checkbox clicked
-equalWeightsCheckbox.addEventListener("change", () => {
-    toggleWeightInputs();
-    calculate();
-});
-
-// Exam toggle clicked
-examSwitch.addEventListener("change", (e) => {
-    if (e.target.checked) {
-        examInputsWrapper.classList.add("expanded");
-    } else {
-        examInputsWrapper.classList.remove("expanded");
-    }
-    calculate();
-});
-
-// Clear all button
-btnClear.addEventListener("click", () => {
-    resetCalculator();
-});
-
-function resetCalculator() {
-    // Remove all rows except the first one
-    const rows = gradesContainer.querySelectorAll(".grade-row");
-    rows.forEach((row, idx) => {
-        if (idx > 0) {
-            row.remove();
-        } else {
-            row.querySelector(".grade-input").value = "";
-            row.querySelector(".weight-input").value = "";
-            row.querySelector(".btn-delete").style.display = "none";
-        }
-    });
-
-    // Reset configurations
-    equalWeightsCheckbox.checked = false;
-    toggleWeightInputs();
-    examSwitch.checked = false;
-    examInputsWrapper.classList.remove("expanded");
-    passingGradeInput.value = currentScale.pass;
-    examWeightInput.value = 30;
-
-    // Reset database active state
-    currentSubjectId = null;
-    document.querySelectorAll(".subject-item").forEach(el => el.classList.remove("active"));
-    btnSaveSubject.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar`;
-    btnSaveSubjectAs.style.display = "none";
-
-    calculate();
-    saveToLocalStorage();
-}
-
-// Share Link button
-btnShare.addEventListener("click", () => {
-    const url = generateShareLink();
-    navigator.clipboard.writeText(url).then(() => {
-        showToast("Enlace de notas copiado al portapapeles");
-    }).catch(err => {
-        showToast("Error al copiar enlace.");
-    });
-});
-
-// Dynamic addition of a grade row
-function addGradeRow(gradeVal = "", weightVal = "") {
-    const rowCount = gradesContainer.querySelectorAll(".grade-row").length;
-    const newRow = document.createElement("div");
-    newRow.className = "grade-row adding";
-    newRow.innerHTML = `
-        <span class="grade-label">Nota ${rowCount + 1}</span>
-        <div class="input-wrapper">
-            <input type="number" class="grade-input" min="${currentScale.min}" max="${currentScale.max}" step="${currentScale.step}" placeholder="Nota" value="${gradeVal}">
-        </div>
-        <div class="input-wrapper">
-            <input type="number" class="weight-input" min="0" max="100" placeholder="Peso" value="${weightVal}" ${equalWeightsCheckbox.checked ? 'disabled' : ''}>
-            <span class="input-suffix">%</span>
-        </div>
-        <button class="btn-delete" title="Eliminar nota">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/></svg>
-        </button>
-    `;
-
-    gradesContainer.appendChild(newRow);
-    
-    requestAnimationFrame(() => {
-        newRow.classList.remove("adding");
-    });
-
-    const firstRowDeleteBtn = gradesContainer.querySelector(".grade-row .btn-delete");
-    if (firstRowDeleteBtn) {
-        firstRowDeleteBtn.style.display = "flex";
-    }
-
-    newRow.querySelector(".btn-delete").addEventListener("click", () => {
-        removeGradeRow(newRow);
-    });
-
-    if (equalWeightsCheckbox.checked) {
-        distributeEqualWeights();
-    }
-
-    calculate();
-}
-
-// Dynamic removal of a grade row
-function removeGradeRow(rowElement) {
-    rowElement.classList.add("removing");
-    
-    rowElement.addEventListener("transitionend", function handler(e) {
-        if (e.propertyName === 'opacity' || e.propertyName === 'transform') {
-            rowElement.remove();
-            
-            const rows = gradesContainer.querySelectorAll(".grade-row");
-            rows.forEach((row, index) => {
-                row.querySelector(".grade-label").textContent = `Nota ${index + 1}`;
-            });
-
-            if (rows.length === 1) {
-                rows[0].querySelector(".btn-delete").style.display = "none";
-            }
-
-            if (equalWeightsCheckbox.checked) {
-                distributeEqualWeights();
-            }
-
-            calculate();
-        }
-    });
-}
-
-// Register delete actions for server-rendered rows
-document.querySelectorAll(".grade-row").forEach(row => {
-    const deleteBtn = row.querySelector(".btn-delete");
-    if (deleteBtn) {
-        deleteBtn.addEventListener("click", () => {
-            removeGradeRow(row);
-        });
-    }
-});
-
-// Toggle weights disabled state
-function toggleWeightInputs() {
-    const isChecked = equalWeightsCheckbox.checked;
-    const weightInputs = gradesContainer.querySelectorAll(".weight-input");
-    weightInputs.forEach(input => {
-        input.disabled = isChecked;
-    });
-    if (isChecked) {
-        distributeEqualWeights();
-    }
-}
-
-// Distribute weights equally
-function distributeEqualWeights() {
-    const rows = gradesContainer.querySelectorAll(".grade-row");
-    const weightVal = (100 / rows.length).toFixed(1);
-    rows.forEach(row => {
-        row.querySelector(".weight-input").value = weightVal;
-    });
-}
-
-// Core calculation engine
-function calculate() {
-    const rows = gradesContainer.querySelectorAll(".grade-row");
-    const examEnabled = examSwitch.checked;
-    const examWeight = examEnabled ? (parseFloat(examWeightInput.value) || 0) : 0;
-    const passingGrade = parseFloat(passingGradeInput.value) || currentScale.pass;
-
-    let totalWeight = 0;
-    let sumGradesWeights = 0;
-    let validGradesCount = 0;
-    let totalWeightsAvailable = 0;
-
-    if (equalWeightsCheckbox.checked) {
-        distributeEqualWeights();
-    }
-
-    rows.forEach(row => {
-        const gradeVal = parseFloat(row.querySelector(".grade-input").value);
-        const weightVal = parseFloat(row.querySelector(".weight-input").value) || 0;
-
-        totalWeightsAvailable += weightVal;
-
-        if (!isNaN(gradeVal)) {
-            validGradesCount++;
-            totalWeight += weightVal;
-            sumGradesWeights += (gradeVal * weightVal);
-        }
-    });
-
-    // Weight indicators
-    let accumulatedWeightForBar = examEnabled ? (totalWeightsAvailable + examWeight) : totalWeightsAvailable;
-    const visualPercent = Math.min(accumulatedWeightForBar, 100);
-    weightSumText.textContent = `${accumulatedWeightForBar.toFixed(1)}%`;
-    weightProgressBar.style.width = `${visualPercent}%`;
-
-    if (accumulatedWeightForBar > 100.1) {
-        weightProgressBar.classList.add("excess");
-        weightWarning.style.display = "flex";
-    } else {
-        weightProgressBar.classList.remove("excess");
-        weightWarning.style.display = "none";
-    }
-
-    // Average
-    let average = 0;
-    if (validGradesCount > 0 && totalWeight > 0) {
-        average = sumGradesWeights / totalWeight;
-        averageText.textContent = average.toFixed(2);
-        
-        const scaleRange = currentScale.max - currentScale.min;
-        const normalizedVal = (average - currentScale.min) / scaleRange;
-        const percent = Math.max(0, Math.min(1, normalizedVal));
-        const offset = 502 - (502 * percent);
-        circleBar.style.strokeDashoffset = offset;
-    } else {
-        averageText.textContent = "-";
-        circleBar.style.strokeDashoffset = 502;
-    }
-
-    // Required exam grade
-    if (examEnabled && validGradesCount > 0) {
-        statusBadge.style.display = "inline-flex";
-        examTargetCard.style.display = "block";
-        
-        const courseworkWeight = 1 - (examWeight / 100);
-        const examWeightFraction = examWeight / 100;
-
-        const neededExamGrade = (passingGrade - (average * courseworkWeight)) / examWeightFraction;
-        const maxPossibleFinal = average * courseworkWeight + currentScale.max * examWeightFraction;
-        const minPossibleFinal = average * courseworkWeight + currentScale.min * examWeightFraction;
-
-        if (minPossibleFinal >= passingGrade) {
-            statusBadge.className = "status-badge approved";
-            statusLabel.textContent = "Aprobado";
-            examTargetValue.textContent = "¡Aprobado!";
-            examTargetDetail.innerHTML = `Tu nota acumulada actual es <strong>${(average * courseworkWeight).toFixed(2)}</strong>. Incluso con la nota mínima de <strong>${currentScale.min.toFixed(1)}</strong> en el examen final, tu promedio final será <strong>${minPossibleFinal.toFixed(2)}</strong>, superando la nota de aprobación de <strong>${passingGrade.toFixed(1)}</strong>.`;
-        } else if (maxPossibleFinal < passingGrade) {
-            statusBadge.className = "status-badge impossible";
-            statusLabel.textContent = "Reprobado";
-            examTargetValue.textContent = "No alcanzable";
-            examTargetDetail.innerHTML = `Lamentablemente no es posible aprobar. Incluso con la nota máxima de <strong>${currentScale.max.toFixed(1)}</strong> en el examen final, tu promedio final máximo será de <strong>${maxPossibleFinal.toFixed(2)}</strong>, que es menor al mínimo para aprobar de <strong>${passingGrade.toFixed(1)}</strong>.`;
-        } else {
-            statusBadge.className = "status-badge pending";
-            statusLabel.textContent = "En Progreso";
-            examTargetValue.textContent = neededExamGrade.toFixed(2);
-            examTargetDetail.innerHTML = `Necesitas obtener al menos un <strong>${neededExamGrade.toFixed(2)}</strong> en el examen final (ponderado al <strong>${examWeight}%</strong>) para aprobar la materia con la nota mínima de <strong>${passingGrade.toFixed(1)}</strong>.`;
-        }
-    } else {
-        statusBadge.style.display = "none";
-        examTargetCard.style.display = "none";
-    }
-
-    saveToLocalStorage();
-    syncURLState();
-}
-
-// Generate share url
-function generateShareLink() {
-    const baseUrl = window.location.origin + window.location.pathname;
-    const scale = currentScaleKey;
-    const examEnabled = examSwitch.checked;
-    const examWeight = examWeightInput.value;
-    const passingGrade = passingGradeInput.value;
-    const equal = equalWeightsCheckbox.checked;
-
-    const rows = gradesContainer.querySelectorAll(".grade-row");
-    const gradeStrings = [];
-    rows.forEach(row => {
-        const g = row.querySelector(".grade-input").value;
-        const w = row.querySelector(".weight-input").value;
-        if (g !== "" || w !== "") {
-            gradeStrings.push(`${g || 0}:${w || 0}`);
-        }
-    });
-
-    const params = new URLSearchParams();
-    params.set("scale", scale);
-    if (gradeStrings.length > 0) {
-        params.set("grades", gradeStrings.join(","));
-    }
-    if (examEnabled) {
-        params.set("exam_enabled", "true");
-        params.set("exam_weight", examWeight);
-    }
-    params.set("pass", passingGrade);
-    if (equal) {
-        params.set("equal", "true");
-    }
-
-    return `${baseUrl}?${params.toString()}`;
-}
-
-// Sync URL bar silently
-function syncURLState() {
-    const shareUrl = generateShareLink();
-    window.history.replaceState({ path: shareUrl }, '', shareUrl);
-}
-
-// Show toaster notification
 function showToast(message) {
-    toast.querySelector("#toastText").textContent = message;
+    toastText.textContent = message;
     toast.classList.add("show");
     setTimeout(() => {
         toast.classList.remove("show");
     }, 3000);
 }
 
-// LocalStorage caching
-function saveToLocalStorage() {
-    const rows = gradesContainer.querySelectorAll(".grade-row");
-    const savedGrades = [];
-    rows.forEach(row => {
-        savedGrades.push({
-            grade: row.querySelector(".grade-input").value,
-            weight: row.querySelector(".weight-input").value
-        });
+// Format number to currency
+function formatCurrency(val) {
+    return new Intl.NumberFormat('es-CL', {
+        style: 'currency',
+        currency: 'CLP',
+        minimumFractionDigits: 0
+    }).format(val);
+}
+
+// ----------------------------------------------------
+// Core Calculation & Render Engine
+// ----------------------------------------------------
+function render() {
+    // 1. Calculate Totals
+    const totalExpenses = state.expenses.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+    const balance = state.income - totalExpenses;
+    
+    // Update summary labels
+    displayIncome.textContent = formatCurrency(state.income);
+    displayExpenses.textContent = formatCurrency(totalExpenses);
+    displayBalance.textContent = formatCurrency(balance);
+    
+    // Balance color indicators
+    if (balance < 0) {
+        displayBalance.className = "balance-val balance-available deficit";
+        budgetWarning.style.display = "flex";
+    } else {
+        displayBalance.className = "balance-val balance-available";
+        budgetWarning.style.display = "none";
+    }
+
+    // Update circular progress bar
+    const percentage = state.income > 0 ? (totalExpenses / state.income) * 100 : 0;
+    percentageText.textContent = `${Math.round(percentage)}%`;
+
+    // Circumference = 2 * PI * r (r=80) = ~502
+    const offset = 502 - (502 * Math.min(percentage, 100) / 100);
+    circleBar.style.strokeDashoffset = offset;
+    
+    // Adjust colors of circular bar based on percentage
+    if (percentage > 100) {
+        circleBar.style.stroke = "var(--accent-danger)";
+    } else if (percentage > 85) {
+        circleBar.style.stroke = "var(--accent-warning)";
+    } else {
+        circleBar.style.stroke = "url(#accent-grad-svg)";
+    }
+
+    // Update savings goal UI and progress
+    displaySavingsGoal.textContent = formatCurrency(state.savingsGoal);
+    
+    let savingsPercentage = 0;
+    if (state.savingsGoal > 0) {
+        if (balance > 0) {
+            savingsPercentage = (balance / state.savingsGoal) * 100;
+        }
+    }
+    
+    const roundedSavingsPct = Math.round(savingsPercentage);
+    savingsPercentageText.textContent = `${roundedSavingsPct}%`;
+    savingsBar.style.width = `${Math.min(savingsPercentage, 100)}%`;
+
+    const savingsProgressBox = document.querySelector(".savings-progress-box");
+    if (savingsPercentage >= 100) {
+        savingsProgressBox.classList.add("completed");
+        savingsStatusText.textContent = "¡Felicidades! Has alcanzado tu meta de ahorro mensual.";
+    } else {
+        savingsProgressBox.classList.remove("completed");
+        if (balance <= 0) {
+            savingsStatusText.textContent = "No tienes ahorros disponibles este mes debido al déficit.";
+        } else {
+            const missingAmount = state.savingsGoal - balance;
+            savingsStatusText.textContent = `Te faltan ${formatCurrency(missingAmount)} para alcanzar tu meta de ahorro.`;
+        }
+    }
+
+    // 2. Render Categories Distribution
+    const categoriesList = ['Comida', 'Transporte', 'Servicios', 'Entretenimiento', 'Otros'];
+    const catTotals = {};
+    categoriesList.forEach(c => catTotals[c] = 0);
+    state.expenses.forEach(item => {
+        if (catTotals[item.category] !== undefined) {
+            catTotals[item.category] += parseFloat(item.amount);
+        } else {
+            catTotals['Otros'] += parseFloat(item.amount);
+        }
     });
 
-    const state = {
-        scale: currentScaleKey,
-        passingGrade: passingGradeInput.value,
-        equalWeights: equalWeightsCheckbox.checked,
-        examEnabled: examSwitch.checked,
-        examWeight: examWeightInput.value,
-        grades: savedGrades
-    };
-
-    localStorage.setItem("calcunota_state", JSON.stringify(state));
-}
-
-// Restore state
-function loadFromLocalStorage() {
-    const stateStr = localStorage.getItem("calcunota_state");
-    if (!stateStr) return;
-
-    try {
-        const state = JSON.parse(stateStr);
-        scaleSelect.value = state.scale || "chile";
-        currentScaleKey = scaleSelect.value;
-        currentScale = SCALES[currentScaleKey];
+    categoryDistribution.innerHTML = "";
+    categoriesList.forEach(cat => {
+        const amt = catTotals[cat];
+        const pct = state.income > 0 ? (amt / state.income) * 100 : 0;
         
-        passingGradeInput.value = state.passingGrade || currentScale.pass;
-        equalWeightsCheckbox.checked = !!state.equalWeights;
-        
-        examSwitch.checked = !!state.examEnabled;
-        if (examSwitch.checked) {
-            examInputsWrapper.classList.add("expanded");
-        }
-        examWeightInput.value = state.examWeight || 30;
+        const catRow = document.createElement("div");
+        catRow.className = "category-progress-row";
+        catRow.innerHTML = `
+            <div class="cat-progress-labels">
+                <span class="cat-name">${cat}</span>
+                <span class="cat-values">${formatCurrency(amt)} (${Math.round(pct)}%)</span>
+            </div>
+            <div class="cat-progress-track">
+                <div class="cat-progress-bar category-${cat.toLowerCase()}" style="width: ${Math.min(pct, 100)}%;"></div>
+            </div>
+        `;
+        categoryDistribution.appendChild(catRow);
+    });
 
-        if (state.grades && state.grades.length > 0) {
-            gradesContainer.innerHTML = "";
-            state.grades.forEach((item, idx) => {
-                addGradeRow(item.grade, item.weight);
-            });
-        }
-    } catch (e) {
-        console.error("Error restoring local state: ", e);
-    }
-}
+    // 3. Render Transactions List with Filters & Search
+    expensesList.innerHTML = "";
 
-// ----------------------------------------------------
-// Database CRUD REST Client Logic
-// ----------------------------------------------------
+    const filteredExpenses = state.expenses.filter(item => {
+        const matchesCategory = state.currentFilter === 'all' || item.category === state.currentFilter;
+        const matchesSearch = item.description.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+                              item.category.toLowerCase().includes(state.searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
 
-// Load subjects list in sidebar
-function loadSubjectsList() {
-    fetch('api.php')
-        .then(response => response.json())
-        .then(res => {
-            if (res.success) {
-                subjectsCount.textContent = res.data.length;
-                if (res.data.length === 0) {
-                    subjectsList.innerHTML = `<div class="empty-subjects">No hay asignaturas guardadas.</div>`;
-                    return;
-                }
-
-                subjectsList.innerHTML = "";
-                res.data.forEach(subject => {
-                    const item = document.createElement("div");
-                    item.className = `subject-item ${currentSubjectId === subject.id ? 'active' : ''}`;
-                    item.dataset.id = subject.id;
-                    
-                    // Format update time
-                    const updateDate = new Date(subject.updated_at).toLocaleDateString('es-ES', {
-                        day: '2-digit', month: '2-digit', year: 'numeric'
-                    });
-
-                    item.innerHTML = `
-                        <div class="subject-info">
-                            <span class="subject-title">${escapeHTML(subject.name)}</span>
-                            <span class="subject-meta">${escapeHTML(SCALES[subject.scale]?.placeholder ? SCALES[subject.scale].placeholder.replace("Ej:", "Escala") : subject.scale)} • ${updateDate}</span>
-                        </div>
-                        <div class="subject-actions">
-                            <button class="btn-item-action delete" title="Eliminar asignatura">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                            </button>
-                        </div>
-                    `;
-
-                    // Register Load Click
-                    item.addEventListener("click", (e) => {
-                        // Avoid triggering load when delete is clicked
-                        if (e.target.closest(".delete")) return;
-                        loadSubjectDetails(subject.id);
-                    });
-
-                    // Register Delete Click
-                    item.querySelector(".delete").addEventListener("click", () => {
-                        if (confirm(`¿Estás seguro de que deseas eliminar "${subject.name}"?`)) {
-                            deleteSubjectFromDatabase(subject.id);
-                        }
-                    });
-
-                    subjectsList.appendChild(item);
-                });
-            }
-        })
-        .catch(err => console.error("Error loading subjects:", err));
-}
-
-// Load a specific subject detail into calculator
-function loadSubjectDetails(id) {
-    fetch(`api.php?id=${id}`)
-        .then(response => response.json())
-        .then(res => {
-            if (res.success) {
-                const s = res.data;
-                currentSubjectId = s.id;
-
-                // Sync UI elements
-                scaleSelect.value = s.scale;
-                currentScaleKey = s.scale;
-                currentScale = SCALES[currentScaleKey];
-                passingGradeInput.value = s.passing_grade;
-                equalWeightsCheckbox.checked = s.equal_weights == 1;
-
-                examSwitch.checked = s.exam_enabled == 1;
-                if (examSwitch.checked) {
-                    examInputsWrapper.classList.add("expanded");
-                } else {
-                    examInputsWrapper.classList.remove("expanded");
-                }
-                examWeightInput.value = s.exam_weight;
-
-                // Load grades list
-                const grades = JSON.parse(s.grades_json);
-                gradesContainer.innerHTML = "";
-                if (grades.length > 0) {
-                    grades.forEach((item, idx) => {
-                        addGradeRow(item.grade, item.weight);
-                    });
-                } else {
-                    addGradeRow();
-                }
-
-                // UI adjustments
-                toggleWeightInputs();
-                calculate();
-
-                // Highlight active list item
-                document.querySelectorAll(".subject-item").forEach(el => {
-                    if (parseInt(el.dataset.id) === currentSubjectId) {
-                        el.classList.add("active");
-                    } else {
-                        el.classList.remove("active");
-                    }
-                });
-
-                // Change save button text to show update mode
-                btnSaveSubject.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar Cambios`;
-                btnSaveSubjectAs.style.display = "inline-flex";
-
-                showToast(`Asignatura "${s.name}" cargada.`);
-            }
-        })
-        .catch(err => console.error("Error loading subject details:", err));
-}
-
-// Open Save Modal
-btnSaveSubject.addEventListener("click", () => {
-    if (currentSubjectId) {
-        // Direct update if already loaded
-        saveSubjectToDatabase();
-    } else {
-        // Open modal to choose subject name
-        openSaveModal();
-    }
-});
-
-btnSaveSubjectAs.addEventListener("click", () => {
-    openSaveModal();
-});
-
-function openSaveModal() {
-    modalSubjectName.value = "";
-    saveModal.classList.add("show");
-    modalSubjectName.focus();
-}
-
-btnModalCancel.addEventListener("click", () => {
-    saveModal.classList.remove("show");
-});
-
-btnModalSave.addEventListener("click", () => {
-    const name = modalSubjectName.value.trim();
-    if (!name) {
-        alert("Por favor ingresa un nombre para la asignatura.");
+    if (filteredExpenses.length === 0) {
+        expensesList.innerHTML = `<div class="empty-list">No se encontraron transacciones.</div>`;
         return;
     }
-    saveModal.classList.remove("show");
-    
-    // Save as new by temporarily clearing ID if clicking "Save As"
-    if (document.activeElement === btnSaveSubjectAs || !currentSubjectId) {
-        saveSubjectToDatabase(name, true);
-    } else {
-        saveSubjectToDatabase(name);
-    }
-});
 
-// Post calculator values to database
-function saveSubjectToDatabase(customName = null, forceNew = false) {
-    // Gather grades
-    const rows = gradesContainer.querySelectorAll(".grade-row");
-    const grades = [];
-    rows.forEach(row => {
-        const g = row.querySelector(".grade-input").value;
-        const w = row.querySelector(".weight-input").value;
-        if (g !== "" || w !== "") {
-            grades.push({
-                grade: g !== "" ? parseFloat(g) : "",
-                weight: w !== "" ? parseFloat(w) : ""
-            });
+    filteredExpenses.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "expense-item-row";
+        row.dataset.id = item.id;
+        
+        // Format date beautifully
+        const dateParts = item.date.split('-');
+        let formattedDate = item.date;
+        if (dateParts.length === 3) {
+            formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
         }
+
+        row.innerHTML = `
+            <div class="expense-desc-block">
+                <span class="expense-desc-title">${escapeHTML(item.description)}</span>
+                <span class="expense-desc-date">${formattedDate}</span>
+            </div>
+            <div class="expense-cat-block">
+                <span class="badge badge-cat category-${item.category.toLowerCase()}">${item.category}</span>
+                <span class="expense-pay-method">${item.payment_method}</span>
+            </div>
+            <div class="expense-amount-block">
+                ${formatCurrency(item.amount)}
+            </div>
+            <div class="expense-actions-block">
+                <button class="btn-item-action edit" title="Editar gasto">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </button>
+                <button class="btn-item-action delete" title="Eliminar gasto">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+            </div>
+        `;
+
+        // Register edit click
+        row.querySelector(".edit").addEventListener("click", () => {
+            openEditModal(item);
+        });
+
+        // Register delete click
+        row.querySelector(".delete").addEventListener("click", () => {
+            if (confirm(`¿Estás seguro de eliminar el gasto "${item.description}"?`)) {
+                deleteExpense(item.id);
+            }
+        });
+
+        expensesList.appendChild(row);
     });
+}
+
+// ----------------------------------------------------
+// API Client / Backend Communication
+// ----------------------------------------------------
+function loadData() {
+    fetch('api.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                state.income = parseFloat(data.income);
+                state.savingsGoal = parseFloat(data.savings_goal || 200000);
+                state.expenses = data.expenses || [];
+                monthlyIncomeInput.value = state.income;
+                savingsGoalInput.value = state.savingsGoal;
+                render();
+            } else {
+                showToast("Error al cargar los datos de la base de datos.");
+            }
+        })
+        .catch(err => {
+            console.error("Error fetching data:", err);
+            showToast("Error de conexión con la base de datos.");
+        });
+}
+
+function saveIncome() {
+    const incomeVal = parseFloat(monthlyIncomeInput.value);
+    if (isNaN(incomeVal) || incomeVal < 0) {
+        alert("Por favor ingresa un ingreso válido no negativo.");
+        return;
+    }
+
+    fetch('api.php?action=save_income', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ income: incomeVal })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            state.income = data.income;
+            render();
+            showToast(data.message);
+        } else {
+            alert("Error: " + data.error);
+        }
+    })
+    .catch(err => console.error("Error saving income:", err));
+}
+
+function saveSavingsGoal() {
+    const savingsGoalVal = parseFloat(savingsGoalInput.value);
+    if (isNaN(savingsGoalVal) || savingsGoalVal < 0) {
+        alert("Por favor ingresa una meta de ahorro válida no negativa.");
+        return;
+    }
+
+    fetch('api.php?action=save_savings_goal', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ savings_goal: savingsGoalVal })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            state.savingsGoal = data.savings_goal;
+            render();
+            showToast(data.message);
+        } else {
+            alert("Error: " + data.error);
+        }
+    })
+    .catch(err => console.error("Error saving savings goal:", err));
+}
+
+function saveExpense() {
+    const desc = expenseDescription.value.trim();
+    const amt = parseFloat(expenseAmount.value);
+    const cat = expenseCategory.value;
+    const dt = expenseDate.value;
+    const pm = expensePaymentMethod.value;
+    const id = expenseId.value;
+
+    if (!desc) {
+        alert("La descripción es obligatoria.");
+        return;
+    }
+    if (isNaN(amt) || amt <= 0) {
+        alert("El monto debe ser un número mayor a cero.");
+        return;
+    }
+    if (!dt) {
+        alert("La fecha es obligatoria.");
+        return;
+    }
 
     const payload = {
-        id: (forceNew) ? null : currentSubjectId,
-        name: customName || (currentSubjectId ? document.querySelector(`.subject-item[data-id="${currentSubjectId}"] .subject-title`).textContent : "Asignatura"),
-        scale: currentScaleKey,
-        passing_grade: parseFloat(passingGradeInput.value) || currentScale.pass,
-        exam_enabled: examSwitch.checked ? 1 : 0,
-        exam_weight: parseFloat(examWeightInput.value) || 30.0,
-        equal_weights: equalWeightsCheckbox.checked ? 1 : 0,
-        grades_json: JSON.stringify(grades)
+        description: desc,
+        amount: amt,
+        category: cat,
+        date: dt,
+        payment_method: pm
     };
 
-    fetch('api.php?action=save', {
+    if (id) {
+        payload.id = parseInt(id);
+    }
+
+    fetch('api.php?action=save_expense', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
     })
-    .then(response => response.json())
-    .then(res => {
-        if (res.success) {
-            currentSubjectId = res.id;
-            loadSubjectsList();
-            showToast(res.message);
-            
-            // Adjust save buttons
-            btnSaveSubject.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar Cambios`;
-            btnSaveSubjectAs.style.display = "inline-flex";
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            closeExpenseModal();
+            loadData();
+            showToast(data.message);
         } else {
-            alert("Error: " + res.error);
+            alert("Error: " + data.error);
         }
     })
-    .catch(err => console.error("Error saving subject:", err));
+    .catch(err => console.error("Error saving expense:", err));
 }
 
-// Delete subject
-function deleteSubjectFromDatabase(id) {
-    fetch('api.php?action=delete', {
+function deleteExpense(id) {
+    fetch('api.php?action=delete_expense', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ id: id })
     })
-    .then(response => response.json())
-    .then(res => {
-        if (res.success) {
-            showToast(res.message);
-            if (currentSubjectId === id) {
-                resetCalculator();
-            }
-            loadSubjectsList();
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            loadData();
+            showToast(data.message);
         } else {
-            alert("Error: " + res.error);
+            alert("Error: " + data.error);
         }
     })
-    .catch(err => console.error("Error deleting subject:", err));
+    .catch(err => console.error("Error deleting expense:", err));
 }
+
+// ----------------------------------------------------
+// Modal Handlers
+// ----------------------------------------------------
+function openAddModal() {
+    modalTitle.textContent = "Registrar Gasto";
+    modalSub.textContent = "Ingresa los detalles de la transacción para actualizar tu billetera digital.";
+    expenseId.value = "";
+    expenseDescription.value = "";
+    expenseAmount.value = "";
+    expenseCategory.selectedIndex = 0;
+    // Default date to today
+    expenseDate.value = new Date().toISOString().split('T')[0];
+    expensePaymentMethod.selectedIndex = 0;
+    
+    expenseModal.classList.add("show");
+    expenseDescription.focus();
+}
+
+function openEditModal(expense) {
+    modalTitle.textContent = "Editar Gasto";
+    modalSub.textContent = "Modifica los detalles del registro seleccionado.";
+    expenseId.value = expense.id;
+    expenseDescription.value = expense.description;
+    expenseAmount.value = expense.amount;
+    expenseCategory.value = expense.category;
+    expenseDate.value = expense.date;
+    expensePaymentMethod.value = expense.payment_method;
+
+    expenseModal.classList.add("show");
+    expenseDescription.focus();
+}
+
+function closeExpenseModal() {
+    expenseModal.classList.remove("show");
+}
+
+// ----------------------------------------------------
+// Filters and Search Events
+// ----------------------------------------------------
+
+// Category Filters click
+categoryFilters.addEventListener("click", (e) => {
+    const btn = e.target.closest(".filter-btn");
+    if (!btn) return;
+
+    document.querySelectorAll(".filter-btn").forEach(el => el.classList.remove("active"));
+    btn.classList.add("active");
+    
+    state.currentFilter = btn.dataset.category;
+    render();
+});
+
+// Search input keypress
+searchInput.addEventListener("input", (e) => {
+    state.searchQuery = e.target.value;
+    render();
+});
+
+// Income Save click
+btnSaveIncome.addEventListener("click", saveIncome);
+
+// Savings Goal Save click
+btnSaveSavingsGoal.addEventListener("click", saveSavingsGoal);
+
+// Modal trigger buttons
+btnOpenAddModal.addEventListener("click", openAddModal);
+btnCancelExpense.addEventListener("click", closeExpenseModal);
+btnSaveExpense.addEventListener("click", saveExpense);
+
+// Close modal when clicking outside
+expenseModal.addEventListener("click", (e) => {
+    if (e.target === expenseModal) {
+        closeExpenseModal();
+    }
+});
 
 // Helper to escape HTML characters
 function escapeHTML(str) {
@@ -732,18 +494,5 @@ function escapeHTML(str) {
     );
 }
 
-// ----------------------------------------------------
-// App Initialization
-// ----------------------------------------------------
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.has("scale") || urlParams.has("grades")) {
-    toggleWeightInputs();
-    calculate();
-} else {
-    loadFromLocalStorage();
-    toggleWeightInputs();
-    calculate();
-}
-
-// Load database items on startup
-loadSubjectsList();
+// Initialize
+loadData();
