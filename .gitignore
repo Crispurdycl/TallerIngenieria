@@ -1,0 +1,4 @@
+db/wallet.db
+.gemini/
+.vscode/
+fiveserver.config.js

@@ -1,8 +1,4 @@
 <?php
-/**
- * Billetera Digital CRUD API
- * Handles GET and POST requests for expenses and budget.
- */
 header('Content-Type: application/json');
 require_once __DIR__ . '/db/db.php';
 
@@ -12,7 +8,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 try {
     $db = getDB();
 
-    // 1. GET Requests: Read
     if ($method === 'GET') {
         if ($action === 'get_income') {
             $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'monthly_income'");
@@ -23,7 +18,6 @@ try {
         }
 
         if (isset($_GET['id'])) {
-            // Read single expense
             $stmt = $db->prepare("SELECT * FROM expenses WHERE id = :id");
             $stmt->execute([':id' => intval($_GET['id'])]);
             $expense = $stmt->fetch();
@@ -35,18 +29,14 @@ try {
                 echo json_encode(['success' => false, 'error' => 'Gasto no encontrado.']);
             }
         } else {
-            // Read all expenses and budget
-            // Read income
             $stmtIncome = $db->prepare("SELECT value FROM settings WHERE key = 'monthly_income'");
             $stmtIncome->execute();
             $income = floatval($stmtIncome->fetchColumn() ?: 1000000);
 
-            // Read savings goal
             $stmtSavings = $db->prepare("SELECT value FROM settings WHERE key = 'savings_goal'");
             $stmtSavings->execute();
             $savings_goal = floatval($stmtSavings->fetchColumn() ?: 200000);
 
-            // Read expenses (ordered by date desc, then id desc)
             $stmtExpenses = $db->query("SELECT * FROM expenses ORDER BY date DESC, id DESC");
             $expenses = $stmtExpenses->fetchAll();
 
@@ -60,9 +50,7 @@ try {
         exit;
     }
 
-    // 2. POST Requests: Create / Update / Delete
     if ($method === 'POST') {
-        // Read raw input JSON
         $input_raw = file_get_contents('php://input');
         $input = json_decode($input_raw, true);
         
@@ -70,7 +58,6 @@ try {
             $input = $_POST;
         }
 
-        // Action: Save Expense (Create or Update)
         if ($action === 'save_expense') {
             $description = isset($input['description']) ? trim($input['description']) : '';
             $amount = isset($input['amount']) ? floatval($input['amount']) : 0.0;
@@ -107,7 +94,6 @@ try {
             $id = isset($input['id']) ? intval($input['id']) : 0;
 
             if ($id > 0) {
-                // UPDATE
                 $stmt = $db->prepare("UPDATE expenses SET 
                     description = :description,
                     amount = :amount,
@@ -128,7 +114,6 @@ try {
                 
                 echo json_encode(['success' => true, 'message' => 'Gasto actualizado exitosamente.', 'id' => $id]);
             } else {
-                // CREATE
                 $stmt = $db->prepare("INSERT INTO expenses 
                     (description, amount, category, date, payment_method) 
                     VALUES 
@@ -148,7 +133,6 @@ try {
             exit;
         }
 
-        // Action: Save Income / Budget
         if ($action === 'save_income') {
             $income = isset($input['income']) ? floatval($input['income']) : 0.0;
             if ($income < 0) {
@@ -164,7 +148,6 @@ try {
             exit;
         }
 
-        // Action: Save Savings Goal
         if ($action === 'save_savings_goal') {
             $savings_goal = isset($input['savings_goal']) ? floatval($input['savings_goal']) : 0.0;
             if ($savings_goal < 0) {
@@ -180,7 +163,6 @@ try {
             exit;
         }
 
-        // Action: Delete Expense
         if ($action === 'delete_expense') {
             $id = isset($input['id']) ? intval($input['id']) : 0;
             if ($id <= 0) {
@@ -197,7 +179,6 @@ try {
         }
     }
 
-    // Default response for unhandled endpoints
     http_response_code(405);
     echo json_encode(['success' => false, 'error' => 'Método o acción no permitida.']);
 
@@ -205,3 +186,4 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Error del servidor: ' . $e->getMessage()]);
 }
+

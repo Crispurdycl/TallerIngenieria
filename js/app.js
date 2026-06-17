@@ -1,6 +1,3 @@
-    // FinanzApp - JavaScript Frontend Logic
-
-// State variables
 let state = {
     income: 1000000,
     savingsGoal: 200000,
@@ -9,7 +6,6 @@ let state = {
     searchQuery: ''
 };
 
-// DOM Elements cache
 const body = document.body;
 const themeToggle = document.getElementById("themeToggle");
 
@@ -52,9 +48,6 @@ const categoryDistribution = document.getElementById("categoryDistribution");
 const toast = document.getElementById("toast");
 const toastText = document.getElementById("toastText");
 
-// ----------------------------------------------------
-// Theme Management
-// ----------------------------------------------------
 const savedTheme = localStorage.getItem("theme") || "theme-dark";
 body.className = savedTheme;
 
@@ -68,11 +61,6 @@ themeToggle.addEventListener("click", () => {
     }
 });
 
-
-
-// ----------------------------------------------------
-// Toast Notification Helper
-// ----------------------------------------------------
 function showToast(message) {
     toastText.textContent = message;
     toast.classList.add("show");
@@ -81,7 +69,6 @@ function showToast(message) {
     }, 3000);
 }
 
-// Format number to currency
 function formatCurrency(val) {
     return new Intl.NumberFormat('es-CL', {
         style: 'currency',
@@ -90,20 +77,14 @@ function formatCurrency(val) {
     }).format(val);
 }
 
-// ----------------------------------------------------
-// Core Calculation & Render Engine
-// ----------------------------------------------------
 function render() {
-    // 1. Calculate Totals
     const totalExpenses = state.expenses.reduce((sum, item) => sum + parseFloat(item.amount), 0);
     const balance = state.income - totalExpenses;
     
-    // Update summary labels
     displayIncome.textContent = formatCurrency(state.income);
     displayExpenses.textContent = formatCurrency(totalExpenses);
     displayBalance.textContent = formatCurrency(balance);
     
-    // Balance color indicators
     if (balance < 0) {
         displayBalance.className = "balance-val balance-available deficit";
         budgetWarning.style.display = "flex";
@@ -112,15 +93,12 @@ function render() {
         budgetWarning.style.display = "none";
     }
 
-    // Update circular progress bar
     const percentage = state.income > 0 ? (totalExpenses / state.income) * 100 : 0;
     percentageText.textContent = `${Math.round(percentage)}%`;
 
-    // Circumference = 2 * PI * r (r=80) = ~502
     const offset = 502 - (502 * Math.min(percentage, 100) / 100);
     circleBar.style.strokeDashoffset = offset;
     
-    // Adjust colors of circular bar based on percentage
     if (percentage > 100) {
         circleBar.style.stroke = "var(--accent-danger)";
     } else if (percentage > 85) {
@@ -129,7 +107,6 @@ function render() {
         circleBar.style.stroke = "url(#accent-grad-svg)";
     }
 
-    // Update savings goal UI and progress
     displaySavingsGoal.textContent = formatCurrency(state.savingsGoal);
     
     let savingsPercentage = 0;
@@ -157,7 +134,6 @@ function render() {
         }
     }
 
-    // 2. Render Categories Distribution
     const categoriesList = ['Comida', 'Transporte', 'Servicios', 'Entretenimiento', 'Otros'];
     const catTotals = {};
     categoriesList.forEach(c => catTotals[c] = 0);
@@ -188,7 +164,6 @@ function render() {
         categoryDistribution.appendChild(catRow);
     });
 
-    // 3. Render Transactions List with Filters & Search
     expensesList.innerHTML = "";
 
     const filteredExpenses = state.expenses.filter(item => {
@@ -208,7 +183,6 @@ function render() {
         row.className = "expense-item-row";
         row.dataset.id = item.id;
         
-        // Format date beautifully
         const dateParts = item.date.split('-');
         let formattedDate = item.date;
         if (dateParts.length === 3) {
@@ -237,12 +211,10 @@ function render() {
             </div>
         `;
 
-        // Register edit click
         row.querySelector(".edit").addEventListener("click", () => {
             openEditModal(item);
         });
 
-        // Register delete click
         row.querySelector(".delete").addEventListener("click", () => {
             if (confirm(`¿Estás seguro de eliminar el gasto "${item.description}"?`)) {
                 deleteExpense(item.id);
@@ -253,9 +225,6 @@ function render() {
     });
 }
 
-// ----------------------------------------------------
-// API Client / Backend Communication
-// ----------------------------------------------------
 function loadData() {
     fetch('api.php')
         .then(res => res.json())
@@ -404,9 +373,6 @@ function deleteExpense(id) {
     .catch(err => console.error("Error deleting expense:", err));
 }
 
-// ----------------------------------------------------
-// Modal Handlers
-// ----------------------------------------------------
 function openAddModal() {
     modalTitle.textContent = "Registrar Gasto";
     modalSub.textContent = "Ingresa los detalles de la transacción para actualizar tu billetera digital.";
@@ -414,7 +380,6 @@ function openAddModal() {
     expenseDescription.value = "";
     expenseAmount.value = "";
     expenseCategory.selectedIndex = 0;
-    // Default date to today
     expenseDate.value = new Date().toISOString().split('T')[0];
     expensePaymentMethod.selectedIndex = 0;
     
@@ -440,11 +405,6 @@ function closeExpenseModal() {
     expenseModal.classList.remove("show");
 }
 
-// ----------------------------------------------------
-// Filters and Search Events
-// ----------------------------------------------------
-
-// Category Filters click
 categoryFilters.addEventListener("click", (e) => {
     const btn = e.target.closest(".filter-btn");
     if (!btn) return;
@@ -456,31 +416,25 @@ categoryFilters.addEventListener("click", (e) => {
     render();
 });
 
-// Search input keypress
 searchInput.addEventListener("input", (e) => {
     state.searchQuery = e.target.value;
     render();
 });
 
-// Income Save click
 btnSaveIncome.addEventListener("click", saveIncome);
 
-// Savings Goal Save click
 btnSaveSavingsGoal.addEventListener("click", saveSavingsGoal);
 
-// Modal trigger buttons
 btnOpenAddModal.addEventListener("click", openAddModal);
 btnCancelExpense.addEventListener("click", closeExpenseModal);
 btnSaveExpense.addEventListener("click", saveExpense);
 
-// Close modal when clicking outside
 expenseModal.addEventListener("click", (e) => {
     if (e.target === expenseModal) {
         closeExpenseModal();
     }
 });
 
-// Helper to escape HTML characters
 function escapeHTML(str) {
     if (!str) return '';
     return str.replace(/[&<>'"]/g, 
@@ -494,5 +448,4 @@ function escapeHTML(str) {
     );
 }
 
-// Initialize
 loadData();

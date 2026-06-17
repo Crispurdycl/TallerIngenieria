@@ -1,9 +1,3 @@
-<?php
-/**
- * FinanzApp - Billetera Digital & Control de Gastos
- * Desarrollado para el Taller de Ingeniería Web
- */
-?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -13,20 +7,16 @@
     <title>FinanzApp - Billetera Digital & Control de Gastos</title>
     <meta name="description"
         content="Controla tus gastos mensuales dependiendo de tus ingresos. Una aplicación web moderna con base de datos SQLite para la gestión financiera.">
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <!-- CSS -->
     <link rel="stylesheet" href="css/style.css">
-    <!-- Script -->
     <script src="js/app.js" defer></script>
 </head>
 
 <body class="theme-dark">
-    <!-- SVG gradients declarations for circular progress -->
     <svg style="width:0;height:0;position:absolute;" aria-hidden="true" focusable="false">
         <defs>
             <linearGradient id="accent-grad-svg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -47,13 +37,11 @@
             FinanzApp
         </a>
         <button class="theme-toggle-btn" id="themeToggle" aria-label="Cambiar tema">
-            <!-- Sun Icon (shown in dark mode) -->
             <svg class="light-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="4" />
                 <path
                     d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
             </svg>
-            <!-- Moon Icon (shown in light mode) -->
             <svg class="dark-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
             </svg>
@@ -61,7 +49,6 @@
     </header>
 
     <main>
-        <!-- Column 1: Info del Grupo, Documentación y Mockup -->
         <section class="card sidebar-info">
             <div class="sidebar-header">
                 <h2>
@@ -120,7 +107,6 @@
 
         </section>
 
-        <!-- Column 2: Dashboard de Control y Listado de Gastos -->
         <section class="card main-dashboard">
             <div class="dashboard-header">
                 <div>
@@ -130,7 +116,6 @@
                 </div>
             </div>
 
-            <!-- Configuración de Presupuesto y Ahorro -->
             <div class="budget-setup-box">
                 <div class="form-grid">
                     <div class="form-group">
@@ -177,7 +162,6 @@
                 Transacciones del Mes
             </div>
 
-            <!-- Filtros de categoría y Búsqueda -->
             <div class="filter-search-row">
                 <div class="search-box">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -197,7 +181,6 @@
                 </div>
             </div>
 
-            <!-- Listado de Gastos -->
             <div class="expenses-list-container">
                 <div class="expenses-list-header">
                     <span>Gasto / Detalle</span>
@@ -210,7 +193,6 @@
                 </div>
             </div>
 
-            <!-- Botón flotante o fijo para registrar gasto -->
             <div class="add-expense-container">
                 <button class="btn btn-primary" id="btnOpenAddModal">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -223,12 +205,10 @@
             </div>
         </section>
 
-        <!-- Column 3: Resumen de Saldos y Gráficos -->
         <aside class="sticky-aside">
             <div class="card result-box">
                 <h2>Resumen Financiero</h2>
 
-                <!-- Progreso Circular del Presupuesto Gastado -->
                 <div class="circle-progress-container">
                     <svg class="circle-svg">
                         <circle class="circle-bg" cx="90" cy="90" r="80" />
@@ -240,7 +220,6 @@
                     </div>
                 </div>
 
-                <!-- Tarjetas de Saldos -->
                 <div class="balance-card">
                     <div class="balance-item">
                         <div class="balance-label">Ingreso Total</div>
@@ -261,7 +240,6 @@
                     </div>
                 </div>
 
-                <!-- Savings Goal Progress bar -->
                 <div class="savings-progress-box">
                     <div class="savings-labels">
                         <span class="savings-label-title">Progreso de Ahorro</span>
@@ -273,7 +251,6 @@
                     <div class="savings-status" id="savingsStatusText">Calculando progreso...</div>
                 </div>
 
-                <!-- Alerta de presupuesto -->
                 <div class="warning-msg" id="budgetWarning" style="display: none;">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2">
@@ -285,7 +262,6 @@
                 </div>
             </div>
 
-            <!-- Distribución por Categorías -->
             <div class="card categories-box">
                 <h3 style="font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -297,14 +273,12 @@
                     Distribución de Gastos
                 </h3>
                 <div class="category-distribution-list" id="categoryDistribution">
-                    <!-- Dynamic rendering of categories spent -->
                     <div class="empty-list" style="padding: 0;">Sin datos registrados.</div>
                 </div>
             </div>
         </aside>
     </main>
 
-    <!-- Modal Form: Agregar/Editar Gasto -->
     <div class="modal-overlay" id="expenseModal">
         <div class="modal-card">
             <h3 id="modalTitle">Registrar Gasto</h3>
@@ -359,7 +333,6 @@
 
 
 
-    <!-- Toast Notification -->
     <div class="toast" id="toast">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2.5">
