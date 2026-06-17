@@ -1,6 +1,6 @@
 Grupo: Sergio Meza, Constanza Silva, Jorge Abarzua, Cristian Cárdenas
 Proyecto: FinanzApp - Billetera Digital
-Repositorio: https://github.com/Crispurdycl/TallerIngenieriaWebGitHub
+Repositorio: https://github.com/Crispurdycl/TallerIngenieria
 
 Link del deploy en Github Codespaces:
-link: [https://glowing-sniffle-7v7j644j7w6fp9v5-8000.app.github.dev/]
+link: [https://bookish-fishstick-pxj67q5r5xvfrgj-8000.app.github.dev//]
