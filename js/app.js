@@ -44,6 +44,11 @@ const expensePaymentMethod = document.getElementById("expensePaymentMethod");
 const btnCancelExpense = document.getElementById("btnCancelExpense");
 const btnSaveExpense = document.getElementById("btnSaveExpense");
 
+const btnMenuCreate = document.getElementById("btnMenuCreate");
+const btnMenuRead = document.getElementById("btnMenuRead");
+const btnMenuUpdate = document.getElementById("btnMenuUpdate");
+const btnMenuDelete = document.getElementById("btnMenuDelete");
+
 const categoryDistribution = document.getElementById("categoryDistribution");
 const toast = document.getElementById("toast");
 const toastText = document.getElementById("toastText");
@@ -428,6 +433,50 @@ btnSaveSavingsGoal.addEventListener("click", saveSavingsGoal);
 btnOpenAddModal.addEventListener("click", openAddModal);
 btnCancelExpense.addEventListener("click", closeExpenseModal);
 btnSaveExpense.addEventListener("click", saveExpense);
+
+btnMenuCreate.addEventListener("click", openAddModal);
+
+btnMenuRead.addEventListener("click", () => {
+    const listHeader = document.querySelector(".section-title");
+    if (listHeader) {
+        listHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showToast("Visualizando lista de gastos registrados.");
+    }
+});
+
+btnMenuUpdate.addEventListener("click", () => {
+    const listHeader = document.querySelector(".section-title");
+    if (listHeader) {
+        listHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const editBtns = document.querySelectorAll(".btn-item-action.edit");
+    if (editBtns.length > 0) {
+        editBtns.forEach(btn => {
+            btn.classList.add("flash-edit");
+            setTimeout(() => btn.classList.remove("flash-edit"), 2000);
+        });
+        showToast("Haz clic en el lápiz (Editar) del gasto que deseas modificar.");
+    } else {
+        showToast("No hay gastos registrados para modificar. Registra uno primero.");
+    }
+});
+
+btnMenuDelete.addEventListener("click", () => {
+    const listHeader = document.querySelector(".section-title");
+    if (listHeader) {
+        listHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const deleteBtns = document.querySelectorAll(".btn-item-action.delete");
+    if (deleteBtns.length > 0) {
+        deleteBtns.forEach(btn => {
+            btn.classList.add("flash-delete");
+            setTimeout(() => btn.classList.remove("flash-delete"), 2000);
+        });
+        showToast("Haz clic en el basurero (Eliminar) del gasto que deseas remover.");
+    } else {
+        showToast("No hay gastos registrados para eliminar. Registra uno primero.");
+    }
+});
 
 expenseModal.addEventListener("click", (e) => {
     if (e.target === expenseModal) {

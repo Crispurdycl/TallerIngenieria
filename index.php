@@ -48,6 +48,42 @@
         </button>
     </header>
 
+    <nav class="main-menu-nav">
+        <div class="nav-container">
+            <span class="menu-label">Menú Principal (CRUD):</span>
+            <div class="nav-links">
+                <button id="btnMenuCreate" class="nav-link-btn" title="Registrar un nuevo gasto (Crear)">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    <span>Crear</span>
+                </button>
+                <button id="btnMenuRead" class="nav-link-btn" title="Visualizar listado de gastos (Leer)">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    <span>Leer</span>
+                </button>
+                <button id="btnMenuUpdate" class="nav-link-btn" title="Modificar un gasto existente (Modificar)">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                    </svg>
+                    <span>Modificar</span>
+                </button>
+                <button id="btnMenuDelete" class="nav-link-btn" title="Eliminar un gasto registrado (Eliminar)">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    <span>Eliminar</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
     <main>
         <section class="card sidebar-info">
             <div class="sidebar-header">
